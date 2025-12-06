@@ -1,53 +1,46 @@
 import Task from "../models/Task.js";
 
-// Create Task
 export const createTask = async (req, res) => {
-  const { title } = req.body;
+  try {
+    const task = await Task.create({
+      userId: req.user.id,
+      title: req.body.title,
+    });
 
-  const task = await Task.create({
-    user: req.user._id,
-    title
-  });
-
-  res.json(task);
+    res.json(task);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to create task" });
+  }
 };
 
-// Get all tasks for logged-in user
 export const getTasks = async (req, res) => {
-  const tasks = await Task.find({ user: req.user._id }).sort({ createdAt: -1 });
-  res.json(tasks);
+  try {
+    const tasks = await Task.find({ userId: req.user.id });
+    res.json(tasks);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch tasks" });
+  }
 };
 
-// Update Task
 export const updateTask = async (req, res) => {
-  const { title, completed } = req.body;
-  const task = await Task.findById(req.params.id);
+  try {
+    const updated = await Task.findByIdAndUpdate(
+      req.params.id,
+      { completed: req.body.completed },
+      { new: true }
+    );
 
-  if (!task) return res.status(404).json({ message: "Task not found" });
-
-  // Ensure the task belongs to the user
-  if (task.user.toString() !== req.user._id.toString()) {
-    return res.status(403).json({ message: "Not authorized" });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update task" });
   }
-
-  task.title = title ?? task.title;
-  task.completed = completed ?? task.completed;
-
-  const updatedTask = await task.save();
-  res.json(updatedTask);
 };
 
-// Delete Task
 export const deleteTask = async (req, res) => {
-  const task = await Task.findById(req.params.id);
-
-  if (!task) return res.status(404).json({ message: "Task not found" });
-
-  // Ensure the task belongs to the user
-  if (task.user.toString() !== req.user._id.toString()) {
-    return res.status(403).json({ message: "Not authorized" });
+  try {
+    await Task.findByIdAndDelete(req.params.id);
+    res.json({ message: "Task deleted" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete task" });
   }
-
-  await task.deleteOne();
-  res.json({ message: "Task deleted successfully" });
 };
